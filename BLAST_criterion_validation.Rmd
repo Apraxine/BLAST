@@ -176,7 +176,7 @@ AllData <-  read.csv2(file, header = TRUE, dec = ".", sep = ",") %>%
          SubType = as.factor(SubType)) %>%
   dplyr::select(-X)
 
-GraphSave_path     = "C:/Users/Roxane Hoyer/Desktop/R/R_STABILO/GitHub/STABILO_criterion_validation/graph/"
+GraphSave_path     = "C:/Users/Roxane Hoyer/Desktop/R/R_STABILO/GitHub/BLAST/graph/"
 DirData = "C:/Users/Roxane Hoyer/Desktop/R/R_STABILO/Data/"
 
 
@@ -571,3 +571,5 @@ ggsave(paste(GraphSave_path, "Distrib_RTmed_SubType_boxplotmean.png"), type = 'c
 <p style="text-align: center;"><em><font size="2">Median reaction time as a function of the participant sub-type. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
 
 
+
+NEXT: SAMPLE SIZE CALCULATION https://www.r-bloggers.com/2017/07/power-analysis-and-sample-size-calculation-for-agriculture/
