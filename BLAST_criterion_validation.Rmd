@@ -1,0 +1,573 @@
+---
+title: "BLAST: validation study"
+author: "Roxane Hoyer"
+date: "2021.11.06"
+output:
+  rmdformats::readthedown:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+    code_folding: "hide"
+    toc_depth: 4
+  html_document:
+    code_folding: "hide"
+    latex_engine: xelatex
+    self_contained: yes
+    fig_caption: yes
+   
+# Le problème df not found venait du fait que je demandais au prog de générer le fichier html dans un dossier spécifique 
+---
+<style>
+body {
+text-align: justify}
+</style>
+
+```{css, echo=FALSE}
+
+h1{color:#17293D;}
+h2{color:#335072;}
+h3{color:#496B91;}
+h4{color:#5E7EA2;}
+
+
+#sidebar {
+    position: fixed;
+    top: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #9b9ea0;
+    z-index: 200;
+    font-size: 16px;
+}
+
+
+#sidebar h2 {
+    z-index: 200;
+    background-color: #2e6c88;
+    text-align: center;
+    padding: 0.809em;
+    display: block;
+    font-size: 100%;
+    margin-top: 0px;
+    margin-bottom: 0.809em;
+}
+
+
+
+#sidebar a {
+    display: inline-block;
+    line-height: 18px;
+    padding: 0.4045em 1.618em;
+    display: block;
+    position: relative;
+    font-size: 90%;
+    color: #ffffff;
+    direction: ltr;
+    text-decoration: none;
+}
+
+  
+#toc ul.nav li.active a {
+    color: #000000 !important;
+    font-weight: bold;
+    background-color: #aac8d8;
+    border-right: solid 0px white !important;
+}
+  
+
+
+#main :not(.leaflet-control) > a {
+    background-image: linear-gradient(180deg,#252671,#82a7d6);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: 0 2em;
+    color: #53bfbb;
+    font-weight: 300;
+    padding: .125em 1px 0 1px;
+    transition: background-position .15s, color .15s;
+}
+
+```
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+
+
+library(itsadug)
+library(mgcv)
+library(mgcViz)
+library(tidyverse)
+library(visreg)    # GAM model visualisation
+library(permutes)
+library(patchwork)
+
+library(afex)       # nouveau package, surveiller les MAJ
+library(lme4)
+library(RVAideMemoire)
+library(LMERConvenienceFunctions)
+library(phia)
+library(multcomp)
+library(lmerTest)
+library(emmeans)
+library(ggpubr)
+library(ggeffects)
+library(sjPlot)
+library(vtree)
+
+library(DHARMa)
+
+library(jtools) #summ function 
+
+library(splines)#to modelize with a regression slope that is inflected 
+library(rcompanion)#to compared GLM models
+library(rmdformats)
+
+library(tinytex)
+library(formatR)
+library(ggplot2)
+library(ggridges)
+library(viridis)
+library(hrbrthemes)
+library(forcats)
+library(lme4)
+library(car)
+library(plotly)
+library(extrafont)
+library(RColorBrewer)
+library(colorspace)
+library(lsmeans)
+library(LMERConvenienceFunctions)
+library(gridExtra)
+library(multcompView)
+library(emmeans)
+library(tidyverse)
+library(stats) 
+library(ggmosaic)
+library(janitor)
+library(forcats)
+library(multcomp)
+library(reshape2)
+library(DescTools)
+library(PMCMR)
+library(R.matlab)
+library(kableExtra)
+library(jtools)
+library(ggstance)
+library(lmtest)
+library(prettydoc)
+library(sjPlot)
+
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+rm(list = ls())
+
+
+file = "C:/Users/Roxane Hoyer/Desktop/R/R_STABILO/Data/DataPatNorm_Stabilo.csv"
+
+AllData <-  read.csv2(file, header = TRUE, dec = ".", sep = ",") %>%
+  mutate(Subject = as.factor(X),
+         Gender = as.factor(Gender),
+         Handedness = as.factor(Handedness),
+         SubType = as.factor(SubType)) %>%
+  dplyr::select(-X)
+
+GraphSave_path     = "C:/Users/Roxane Hoyer/Desktop/R/R_STABILO/GitHub/STABILO_criterion_validation/graph/"
+DirData = "C:/Users/Roxane Hoyer/Desktop/R/R_STABILO/Data/"
+
+
+##fonction for quantiles calculation
+quantiles_95 <- function(x) {
+  r <- quantile(x, probs=c(0.05, 0.25, 0.5, 0.75, 0.95))
+  names(r) <- c("ymin", "lower", "middle", "upper", "ymax")
+  r 
+}
+
+```
+
+Let's first, we take a look to our samples according to age.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+AllData %>%
+  group_by(Age, SubType) %>%
+  dplyr :: summarise(nb = n()) %>%
+  ggplot(aes(y=nb, x=Age, fill=nb)) +
+  geom_bar(stat="identity", fill="steelblue4") +
+  facet_grid(~SubType) +
+  # scale_y_continuous(breaks=seq(0, 35, by=5))+
+    labs(
+    title = "Sample by age for each group of participant",  
+    x     = "Age", 
+    y     = "Number")+
+  theme(legend.position = "none")
+ggsave(paste(GraphSave_path, "Sample_AGE-year_GROUP_unit.png"), type = 'cairo')
+```
+<p style="text-align: center;"><em><font size="2">Samples according to the participant sub-type, by age.</em></font></p>
+
+
+
+This graph suggests that :
+
+- Age groups are highly imbalanced, and some ages are even non-existent within the ADD-HI group.  
+
+To overcome this issue, age ranges will be used to replace the simple age groups. Based on the available number of participants by age, and the previous findings about attention development during childhood, participants were assigned to 3 different age ranges:
+
+- 7 to 9-years-old
+- 10 to 11-years-old
+- 12 to 15-years-old
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+AllData <- mutate(AllData, AgeRange = Age)
+
+AllData$AgeRange[AllData$AgeRange == 7 | AllData$AgeRange == 8 | AllData$AgeRange == 9 ] <- "7_9"
+AllData$AgeRange[AllData$AgeRange == 10 | AllData$AgeRange == 11 ] <- "10_11"
+AllData$AgeRange[AllData$AgeRange == 12 | AllData$AgeRange == 13 | AllData$AgeRange == 14 | AllData$AgeRange == 15] <- "12_15"
+
+AllData$AgeRange <- factor(AllData$AgeRange, levels = c("7_9", "10_11", "12_15"))
+
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+AllData %>%
+  group_by(AgeRange, SubType) %>%
+  dplyr :: summarise(nb = n()) %>%
+  ggplot(aes(y=nb, x=AgeRange, fill=nb)) +
+  geom_bar(stat="identity", fill="steelblue4") +
+  facet_grid(~SubType) +
+  # scale_y_continuous(breaks=seq(0, 35, by=5))+
+    labs(
+    title = "Sample by age for each participant sub-type",  
+    x     = "Age Range", 
+    y     = "Number")+
+  theme(legend.position = "none")
+ggsave(paste(GraphSave_path, "Sample_AGERANGE_GROUP_unit.png"), type = 'cairo')
+```
+<p style="text-align: center;"><em><font size="2">Samples according to the participant sub-type, by age range.</em></font></p>
+
+
+Samples between age groups seem now better balanced, especially within the ADHD groups. Though, only a reduced number of participants aged of 12-15yo belong to the ADD-HI category.  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+AllData %>%
+  filter(SubType != "Control") %>%
+  group_by(AgeRange, SubType) %>%
+  dplyr :: summarise(nb = n()) %>%
+  ggplot(aes(y=nb, x=AgeRange, fill=nb)) +
+  geom_bar(stat="identity", fill="steelblue4") +
+  facet_grid(~SubType) +
+  # scale_y_continuous(breaks=seq(0, 35, by=5))+
+    labs(
+    title = "Sample by age for the ADHD sub-types",  
+    x     = "Age Range", 
+    y     = "Number")+
+  theme(legend.position = "none")
+ggsave(paste(GraphSave_path, "Sample_AGERANGE_ADHDGROUP_unit.png"), type = 'cairo')
+
+
+```
+<p style="text-align: center;"><em><font size="2">Samples according to the ADHD sub-types, by age range.</em></font></p>
+
+
+
+
+# RT MEASURES 
+
+## Median RT
+
+### Median RT visualization and preprocessing
+
+
+Summary of the MEDIAN RT variable: 
+```{r, echo=FALSE}
+summary(AllData$MEDIAN_RT_F30_1)
+```
+
+1 participant has a median RT < 150 ms. </br>
+6 participants have a median RT > 2500 ms. 
+
+Herein, we considered these participants as outliers and removed them from further analyses. 
+
+
+Total exclusions based on Median RT <strong>n=7</strong>.
+
+
+```{r, echo=FALSE}
+
+AllData %>%
+  filter(MEDIAN_RT_F30_1 > 150) %>%
+  filter(MEDIAN_RT_F30_1 < 2500) -> AllData 
+
+
+write.csv(AllData, paste0(DirData, "AllData_Blast_outlier_excluded.csv"))
+
+
+
+```
+
+New summary of the MEDIAN RT variable: 
+```{r, echo=FALSE}
+summary(AllData$MEDIAN_RT_F30_1)
+```
+
+
+Data visualization, according to the SUBTYPE, GENDER and HANDEDNESS factors, after outliers removal:
+```{r, fig.align='center'}
+
+vtree(AllData, c("SubType", "Gender", "Handedness"),
+          horiz = TRUE)
+
+# grVizToPNG(vtrepng, width=800, folder = GraphSave_path) #to save vtree object
+
+
+```
+<p style="text-align: center;"><em><font size="2">Numbers and percentages of participants according to the participant sub-type, gender and handedness.</em></font></p>
+
+
+
+This plot suggests that :
+
+- all the participant from the Cité de la Science (normative data) reported to be right handed (which is highly improbable considering the size of the control group, n=650). Therefore, the HANDEDNESS factor should not be considered in further analyses; 
+- the GENDER factor levels are quite imbalanced in the ADD-HI group. This needs to be noted if we choose to consider this factor in further analyses. 
+
+Now, we check out the distribution of the median RT according to the different participant sub-types (SUBTYPE FACTOR). One color by SUBTYPE level :   
+
+
+```{r , message=FALSE, warning=FALSE, echo=FALSE, fig.align='center'}
+
+AllData %>%
+dplyr::select(SubType, MEDIAN_RT_F30_1) %>%
+  ggplot(aes(x = MEDIAN_RT_F30_1, fill = SubType, color = SubType)) +
+  geom_density(alpha = 0.3) +
+  theme_bw() +
+  theme(
+    plot.title   = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 13, hjust = 1),
+    axis.title.y = element_text(color = "black", size = 13, hjust = 1),
+    panel.border = element_blank(),
+    axis.text    = element_text(size  = 9),
+    legend.position = "none",
+    strip.background = element_rect(colour="gray94", fill="gray94"))+
+ labs(
+    title = "Median RT distribution according to the participant sub-type",
+    x = "Median RT (ms)")
+ggsave(paste(GraphSave_path, "GROUP_DISTRIB_density_MEDIAN_RT.png"), type = 'cairo', units = c("cm"), width = 20, height = 15)
+
+
+```
+<p style="text-align: center;"><em><font size="2">Median reaction time distribution according to the participant sub-type.</em></font></p>
+
+
+This plot suggests that :
+
+- the Median RT distributions in ADD and ADD-HI patients are quite similar; 
+- the Median RT distribution in the Control sub-type is likely to fit a gamma distribution, while the distributions in both the two groups of patients would better fit a Gaussian distribution.  
+
+
+
+### Median RT modelization and statistics 
+
+We explored the effect of different factors on the Median RT measures. To do so, we used a GLM approach and considered several fixed factors :     
+
+- Age <em>(3 levels: 7-9, 10-11, 12-15)</em>
+- SubType (3 levels: ADD, ADD-HI, Control)</em>   
+- Gender (2 levels: Male, Female)</em>
+
+Note that the HANDEDNESS factor was not considered in analyses (see [this section](#median-rt-visualization-and-preprocessing) for more details).
+
+Here, we systematically adopted a threefold approach: 
+
+- First: determine which model finely describes the data
+- Second: run statistical analysis using the aforementioned best model
+- Third: post-hoc analyses
+
+We then now need to find out what could be the best model for the Median RT measure.
+
+
+
+```{r, message=FALSE, warning=FALSE}
+
+AllData %>%
+  select(Subject, AgeRange, Gender, SubType, MEDIAN_RT_F30_1) %>%
+  mutate(AgeNum = AgeRange) -> AllData2
+
+AllData2$AgeNum = as.factor(AllData2$AgeNum)
+levels(AllData2$AgeNum) = list("1"=c("7_9"), "2"=c("10_11"), "3"=c("12_15"))
+
+
+model.01 <- glm(MEDIAN_RT_F30_1 ~ AgeRange*Gender*SubType,
+                  data = AllData,
+                  family = Gamma())
+
+
+model.02 <- glm(MEDIAN_RT_F30_1 ~ AgeRange*Gender*SubType,
+                  data = AllData2,
+                  family = gaussian())
+
+
+model.03 <- glm(MEDIAN_RT_F30_1 ~ AgeRange*Gender*SubType,
+                  data = AllData2,
+                  family = gaussian(link = "log"))
+
+compareGLM(model.01, model.02, model.03)
+
+```
+
+
+The model.01 with a Gamma distribution looks better than the others models. 
+Now let's take a look to the details of this model and see if something might be wrond with it. 
+
+```{r, message=FALSE, warning=FALSE}
+library(performance)
+r2(model.01)
+```
+
+The R² seems sufficient.  
+
+```{r, message=FALSE, warning=FALSE}
+summ(model.01)
+```
+
+The table above indicates that the model was not able to modelize the data for "AgeRange12_15:GenderMale:SubTypeADD-HI". In other words, there is <strong>no ADD-HI boys aged of 12-15yo</strong>. 	
+
+Now, let's check how the distribution family is a good fit for our model ([click here for more details about check_distrivution()](https://www.rdocumentation.org/packages/performance/versions/0.7.2/topics/check_distribution) or [here](https://cran.r-project.org/web/packages/performance/performance.pdf))
+
+
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
+
+check_distribution(model.01)
+check_model(model.01)
+ggsave(paste(GraphSave_path, "MEDIAN_RT_checkmodel01.png"), type = 'cairo', units = c("cm"), width = 70, height = 25)
+
+# par(mfrow=c(2,2)) 
+# plot(model.01)
+
+```
+<p style="text-align: center;"><em><font size="2">Visual check of the model.</em></font></p>
+
+
+
+After quality check, the model.01 seems to well describe the data, without over fitting. 
+
+We can now run a typical variance analysis. For GLM, the Anova function allows to run either likelihood-ratio chisquare test, Wald chisquare test or F-tests. See [here](https://www.rdocumentation.org/packages/car/versions/3.0-11/topics/Anova) for more information. 
+
+```{r, message=FALSE, warning=FALSE}
+Anova(model.01, test.statistic = "LR")
+```
+
+
+
+><strong>Note:</strong>
+>
+>Here we could also have used "Anova(model.01, test.statistic = "F")".
+>
+>F-test: method used to jointly test all the covariates, in essence asking whether the model is better than a randomly selected one. 
+>
+>Likelihood ratio test: is a maximum likelihood test used to compare the likelihoods of two models to see which one is a better explanation of the data. 
+>
+>Maximum likelihood tests make stronger assumptions, and in return are more efficient in their use of data relative to method of moments tests. In practice it there is not going to be a big difference in results when using either F or MLR test, though likelihood ratio tests are more popular for generically comparing two separate regressions. There is no much point in using an F-test of a single model, whereas the likelihood ratio test can be used for generalized linear models as a sort of replacement for R2 in testing goodness of fit.
+
+
+
+
+<strong>Results from the MEDIAN RT variance analysis show:</strong>
+
+- a main effect of AGE RANGE
+- a main effect of SUBTYPE
+
+Let's then adjust the model (otherwise emmeans' output can result in NA):
+```{r, message=FALSE, warning=FALSE}
+model.01.adj <- glm(MEDIAN_RT_F30_1 ~ AgeRange + Gender + SubType,
+                  data = AllData,
+                  family = Gamma())
+```
+
+Tukey post-hoc analysis for the AGE effect:
+```{r, message=FALSE, warning=FALSE}
+modelrt.ph.age = emmeans(model.01.adj, pairwise ~ AgeRange)
+modelrt.ph.age$contrasts
+```
+
+Irrespective of the SUBJECT TYPE, participants are becoming faster to answer the target with increasing age. 
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
+
+
+AllData %>%
+  ggplot(aes(x = AgeRange, y = MEDIAN_RT_F30_1, fill = AgeRange)) +
+    stat_summary(fun.data = quantiles_95, geom="boxplot") +
+    geom_jitter(color="black", size=0.5) +
+    scale_y_continuous(limits = c(200, 2000), breaks = seq(200, 2000, by=200)) +
+    scale_fill_viridis(option = "turbo", discrete = TRUE, alpha = 0.5) +
+    scale_color_viridis(option = "turbo",discrete = TRUE, alpha = 0.5) +
+    scale_x_discrete(labels = c("7-9", "10-11", "12-18"))+
+  theme_bw() +
+  theme(
+    plot.title   = element_text(color = "black", size = 14, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 14, hjust = 1),
+    axis.title.y = element_text(color = "black", size = 14, hjust = 1),
+    panel.border = element_blank(),
+    axis.text    = element_text(size  = 12), 
+    legend.position = "none",
+    strip.background = element_rect(colour="gray94", fill="gray94"))+
+ labs(
+    title = "Median RT distribution by participant sub-type ", 
+    x = "Age range (years)", 
+    y = "Median RT (ms)") 
+ggsave(paste(GraphSave_path, "Distrib_RTmed_AgeRange_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
+
+
+```
+<p style="text-align: center;"><em><font size="2">Median reaction time as a function of the age range. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
+
+
+
+Tukey post-hoc analysis for the SUBJECT TYPE effect:
+
+```{r, message=FALSE, warning=FALSE}
+modelrt.ph.subtype = emmeans(model.01.adj, pairwise ~ SubType)
+modelrt.ph.subtype$contrasts
+
+```
+
+HSD Post-hoc analysis indicates that both of the patient groups exhibit similar Median RT to the task. Additionally, both ADD and ADD-HI participants were slower to respond to target in comparison to participants from Control group. 
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
+
+
+AllData %>%
+  ggplot(aes(x = SubType, y = MEDIAN_RT_F30_1, fill = SubType)) +
+    stat_summary(fun.data = quantiles_95, geom="boxplot") +
+    geom_jitter(color="black", size=0.5) +
+    scale_y_continuous(limits = c(200, 2000), breaks = seq(200, 2000, by=200)) +
+    scale_fill_viridis(option = "mako", discrete = TRUE, alpha = 0.5) +
+    scale_color_viridis(option = "mako",discrete = TRUE, alpha = 0.5) +
+  theme_bw() +
+  theme(
+    plot.title   = element_text(color = "black", size = 14, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 14, hjust = 1),
+    axis.title.y = element_text(color = "black", size = 14, hjust = 1),
+    panel.border = element_blank(),
+    axis.text    = element_text(size  = 12), 
+    legend.position = "none",
+    strip.background = element_rect(colour="gray94", fill="gray94"))+
+ labs(
+    title = "Median RT distribution by group ", 
+    x = "Participant sub-type", 
+    y = "Median RT (ms)") 
+ggsave(paste(GraphSave_path, "Distrib_RTmed_SubType_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
+
+```
+<p style="text-align: center;"><em><font size="2">Median reaction time as a function of the participant sub-type. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
+
+
