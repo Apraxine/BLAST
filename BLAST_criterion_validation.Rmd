@@ -201,7 +201,7 @@ AllData %>%
   facet_grid(~SubType) +
   # scale_y_continuous(breaks=seq(0, 35, by=5))+
     labs(
-    title = "Sample by age for each group of participant",  
+    title = "Sample by age for each participant sub-type",  
     x     = "Age", 
     y     = "Number")+
   theme(legend.position = "none")
