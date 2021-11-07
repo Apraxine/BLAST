@@ -444,7 +444,7 @@ Now, let's check how the distribution family is a good fit for our model ([click
 
 
 
-```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center", fig.height=3, fig.width=10}
 
 check_distribution(model.01)
 check_model(model.01)
@@ -499,7 +499,8 @@ modelrt.ph.age = emmeans(model.01.adj, pairwise ~ AgeRange)
 modelrt.ph.age$contrasts
 ```
 
-Irrespective of the SUBJECT TYPE, participants are becoming faster to answer the target with increasing age. 
+<p style="color:SteelBlue"><strong>Irrespective of the SUBJECT TYPE, participants are becoming faster to answer the target with increasing age.</strong></p>
+
 ```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
 
 
@@ -521,7 +522,7 @@ AllData %>%
     legend.position = "none",
     strip.background = element_rect(colour="gray94", fill="gray94"))+
  labs(
-    title = "Median RT distribution by participant sub-type ", 
+    title = "Median RT distribution by age range ", 
     x = "Age range (years)", 
     y = "Median RT (ms)") 
 ggsave(paste(GraphSave_path, "Distrib_RTmed_AgeRange_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
@@ -540,7 +541,7 @@ modelrt.ph.subtype$contrasts
 
 ```
 
-HSD Post-hoc analysis indicates that both of the patient groups exhibit similar Median RT to the task. Additionally, both ADD and ADD-HI participants were slower to respond to target in comparison to participants from Control group. 
+<p style="color:SteelBlue"><strong>HSD Post-hoc analysis indicates that both of the patient groups exhibit similar Median RT to the task. Additionally, both the ADD and ADD-HI participants were slower to respond to target in comparison to participants from the Control group.</strong></p> 
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
 
@@ -562,7 +563,7 @@ AllData %>%
     legend.position = "none",
     strip.background = element_rect(colour="gray94", fill="gray94"))+
  labs(
-    title = "Median RT distribution by group ", 
+    title = "Median RT distribution by participant sub-type ", 
     x = "Participant sub-type", 
     y = "Median RT (ms)") 
 ggsave(paste(GraphSave_path, "Distrib_RTmed_SubType_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
