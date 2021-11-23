@@ -398,39 +398,25 @@ We then now need to find out what could be the best model for the Median RT meas
 
 # here, Age is a integer variable
 
-model.rt.01 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+model.01 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
                   data = AllData,
                   family = Gamma())
 
-model.rt.02 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+model.02 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
                   data = AllData,
                   family = Gamma(link = "log"))
 
-model.rt.03 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+model.03 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
                   data = AllData,
                   family = gaussian())
 
 
-model.rt.04 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+model.04 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
                   data = AllData,
                   family = gaussian(link = "log"))
 
-x <- compareGLM(model.rt.01, model.rt.02, model.rt.03, model.rt.04)
+x <- compareGLM(model.01, model.02, model.03, model.04)
 x
-
-```
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-rm(model.rt.02, model.rt.03, model.rt.04)
-```
-
-
-Let's then adjust the model (otherwise emmeans' output can result in NA):
-```{r, message=FALSE, warning=FALSE}
-model.rt.01.adj <- glm(MEDIAN_RT_F30_1 ~ Age + Gender + SubType,
-                  data = AllData,
-                  family = Gamma())
-rm(model.rt.01)
 
 ```
 
@@ -440,13 +426,13 @@ Now let's take a look to the details of this model and see if something might be
 
 ```{r, message=FALSE, warning=FALSE}
 library(performance)
-r2(model.rt.01.adj)
+r2(model.01)
 ```
 
 The R² seems sufficient.  
 
 ```{r, message=FALSE, warning=FALSE}
-summ(model.rt.01.adj)
+summ(model.01)
 ```
 
 The table above indicates that the model was not able to modelize the data for "AgeRange12_15:GenderMale:SubTypeADD-HI". In other words, there is <strong>no ADD-HI boys aged of 12-15yo</strong>. 	
@@ -457,8 +443,8 @@ Now, let's check how the distribution family is a good fit for our model ([click
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center", fig.height=3, fig.width=10}
 
-check_distribution(model.rt.01.adj)
-check_model(model.rt.01.adj)
+check_distribution(model.01)
+check_model(model.01)
 ggsave(paste(GraphSave_path, "MEDIAN_RT_checkmodel01.png"), type = 'cairo', units = c("cm"), width = 70, height = 25)
 
 # par(mfrow=c(2,2)) 
@@ -474,7 +460,7 @@ After quality check, the model.01 seems to well describe the data, without over 
 We can now run a typical variance analysis. For GLM, the Anova function allows to run either likelihood-ratio chisquare test, Wald chisquare test or F-tests. See [here](https://www.rdocumentation.org/packages/car/versions/3.0-11/topics/Anova) for more information. 
 
 ```{r, message=FALSE, warning=FALSE}
-Anova(model.rt.01.adj, test.statistic = "LR")
+Anova(model.01, test.statistic = "LR")
 ```
 
 
@@ -497,17 +483,22 @@ Anova(model.rt.01.adj, test.statistic = "LR")
 - a main effect of AGE 
 - a main effect of SUBTYPE
 
-
+Let's then adjust the model (otherwise emmeans' output can result in NA):
+```{r, message=FALSE, warning=FALSE}
+model.01.adj <- glm(MEDIAN_RT_F30_1 ~ Age + Gender + SubType,
+                  data = AllData,
+                  family = Gamma())
+```
 
 Tukey post-hoc analysis for the AGE effect:
 ```{r, message=FALSE, warning=FALSE}
 
 summary(AllData$Age)
 
-modelrt.ph.subtype_age <- emmeans(model.rt.01.adj, ~ SubType | Age,
+emm.02 <- emmeans(model.01, ~ SubType | Age,
                   at = list(Age = c(78, 9, 12)))
 
-pairs(modelrt.ph.subtype_age)
+pairs(emm.02)
 
 
 
@@ -552,7 +543,7 @@ ggsave(paste(GraphSave_path, "Distrib_RTmed_AgeRange_boxplotmean.png"), type = '
 Tukey post-hoc analysis for the SUBJECT TYPE effect:
 
 ```{r, message=FALSE, warning=FALSE}
-modelrt.ph.subtype = emmeans(model.rt.01.adj, pairwise ~ SubType)
+modelrt.ph.subtype = emmeans(model.01.adj, pairwise ~ SubType)
 modelrt.ph.subtype$contrasts
 
 ```
@@ -672,42 +663,25 @@ x$Fit.criteria
 The model.wpen.01 with a Gamma distribution without log transformation looks better than the others models. 
 Now let's take a look to the details of this model and see if something might be wrong with it. 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-rm(model.wpen.02, model.wpen.03, model.wpen.04)
-```
-
-
-Let's then adjust the model:
-```{r, message=FALSE, warning=FALSE}
-Anova(model.wpen.01, test.statistic = "LR")
-
-
-model.wpen.01.adj <- glm(MEANTR_WPEN_F30_1 ~ Age + Gender + SubType,
-                  data = AllData,
-                  family = Gamma())
-rm(model.wpen.01)
-
-```
-
 
 
 ```{r, message=FALSE, warning=FALSE}
 library(performance)
-r2(model.wpen.01.adj)
+r2(model.wpen.01)
 ```
 
 The R² is seems okay but it is not that much important.  
 
 ```{r, message=FALSE, warning=FALSE}
-summ(model.wpen.01.adj)
+summ(model.wpen.01)
 ```
 
 Now, let's check if the distribution family is a good fit for our model.
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center", fig.height=3, fig.width=10}
 
-check_distribution(model.wpen.01.adj)
-check_model(model.wpen.01.adj)
+check_distribution(model.wpen.01)
+check_model(model.wpen.01)
 ggsave(paste(GraphSave_path, "MEANRTWPEN_checkmodel01.png"), type = 'cairo', units = c("cm"), width = 70, height = 25)
 
 # par(mfrow=c(2,2)) 
@@ -724,7 +698,7 @@ After quality check, the model.wpen.01 seems to adequately describe the data, wi
 We can now run a variance analysis. 
 
 ```{r, message=FALSE, warning=FALSE}
-Anova(model.wpen.01.adj, test.statistic = "LR")
+Anova(model.wpen.01, test.statistic = "LR")
 ```
 
 <strong>Results from the MEAN RT WPEN variance analysis show:</strong>
@@ -737,12 +711,12 @@ Anova(model.wpen.01.adj, test.statistic = "LR")
 Tukey post-hoc analysis for the SUBJECT TYPE effect:
 
 ```{r, message=FALSE, warning=FALSE}
-modelrtwpen.ph.subtype = emmeans(model.wpen.01.adj, pairwise ~ SubType)
+modelrtwpen.ph.subtype = emmeans(model.wpen.01, pairwise ~ SubType)
 modelrtwpen.ph.subtype$contrasts
 
 ```
 
-<p style="color:SteelBlue"><strong>HSD Post-hoc analysis indicates that there is no difference between ADD and ADD-HI patients, and no difference between ADD-HI and control participants. However, ADD patients showed slower MEAN RT WPEN than control participants.</strong></p> 
+<p style="color:SteelBlue"><strong>HSD Post-hoc analysis indicates that there is no difference between ADD and ADD-HI patients, and no difference between ADD-HI and control participants. However, ADD patients were found to present greater MEAN RT WPEN than control participants.</strong></p> 
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
 
@@ -771,69 +745,6 @@ ggsave(paste(GraphSave_path, "Distrib_MRTWPEN_SubType_boxplotmean.png"), type = 
 
 ```
 <p style="text-align: center;"><em><font size="2">Mean reaction time with penalties as a function of the participant sub-type. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
-
-
-# RESPONSE TYPES
-
-## Intensity
-PCT3000_F30_1
-
-
-Summary of PCT_3000 response variable (index of intensity): 
-```{r, echo=FALSE}
-summary(AllData$PCT3000_F30_1)
-
-```
-
-
-```{r, echo = FALSE, message = FALSE, fig.align="center"}
-
-AllData %>%
-  ggplot(aes(x = SubType, y = PCT3000_F30_1, color = SubType)) +
-  geom_jitter(size=2, alpha=.7) +
-  scale_color_manual(values = c("ADD-HI" = "green4", ADD = "darkred", Control = "deepskyblue4"))  +
-  # scale_y_continuous(limits = c(40, 100), breaks = seq(40, 100, by=10)) +
-  # facet_wrap(~Load, labeller = as_labeller(loadlab))  +
-  theme_bw() +
-  theme(plot.title   = element_text(color = "black", size = 14, face = "bold"),
-        axis.title.x = element_text(color = "black", size = 14, hjust = 1),
-        axis.title.y = element_text(color = "black", size = 14, hjust = 1),
-        panel.border = element_blank(),
-        axis.text    = element_text(size  = 12), 
-        legend.position = "none",
-        strip.background = element_rect(colour="gray94", fill="gray94")) +
-  labs(title = "Mean intensity distribution according to the participant sub-type", 
-       x="Sub-type", 
-       y="Mean intensity (%)") 
-ggsave(paste(GraphSave_path, "PCT3000_INTENSITY_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
-
-
-```
-
-
-
-
-```{r , message=FALSE, warning=FALSE, echo=FALSE, fig.align='center'}
-
-AllData %>%
-dplyr::select(SubType, PCT3000_F30_1) %>%
-  ggplot(aes(x = PCT3000_F30_1, fill = SubType, color = SubType)) +
-  geom_density(alpha = 0.3) +
-  theme_bw() +
-  theme(
-    plot.title   = element_text(color = "black", size = 12, face = "bold"),
-    axis.title.x = element_text(color = "black", size = 13, hjust = 1),
-    axis.title.y = element_text(color = "black", size = 13, hjust = 1),
-    panel.border = element_blank(),
-    axis.text    = element_text(size  = 9),
-    strip.background = element_rect(colour="gray94", fill="gray94"))+
- labs(
-    title = "Mean intensity according to the participant sub-type",
-    x = "Mean intensity (%)")
-ggsave(paste(GraphSave_path, "GROUP_DISTRIB_density_PCT3000_INTENSITY.png"), type = 'cairo', units = c("cm"), width = 20, height = 15)
-
-
-```
 
 
 
