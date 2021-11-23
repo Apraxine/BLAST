@@ -415,7 +415,7 @@ model.rt.04 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
                   data = AllData,
                   family = gaussian(link = "log"))
 
-x <- compareGLM(model.01, model.02, model.03, model.04)
+x <- compareGLM(model.rt.01, model.rt.02, model.rt.03, model.rt.04)
 x
 
 ```
@@ -504,10 +504,10 @@ Tukey post-hoc analysis for the AGE effect:
 
 summary(AllData$Age)
 
-model.rt.01.adj.Subtype_Age <- emmeans(model.rt.01.adj, ~ SubType | Age,
+modelrt.ph.subtype_age <- emmeans(model.rt.01.adj, ~ SubType | Age,
                   at = list(Age = c(78, 9, 12)))
 
-pairs(model.rt.01.adj.Subtype_Age)
+pairs(modelrt.ph.subtype_age)
 
 
 
@@ -552,7 +552,7 @@ ggsave(paste(GraphSave_path, "Distrib_RTmed_AgeRange_boxplotmean.png"), type = '
 Tukey post-hoc analysis for the SUBJECT TYPE effect:
 
 ```{r, message=FALSE, warning=FALSE}
-modelrt.ph.subtype = emmeans(model.01.adj, pairwise ~ SubType)
+modelrt.ph.subtype = emmeans(model.rt.01.adj, pairwise ~ SubType)
 modelrt.ph.subtype$contrasts
 
 ```
