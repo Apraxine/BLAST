@@ -356,7 +356,6 @@ dplyr::select(SubType, MEDIAN_RT_F30_1) %>%
     axis.title.y = element_text(color = "black", size = 13, hjust = 1),
     panel.border = element_blank(),
     axis.text    = element_text(size  = 9),
-    legend.position = "none",
     strip.background = element_rect(colour="gray94", fill="gray94"))+
  labs(
     title = "Median RT distribution according to the participant sub-type",
@@ -397,29 +396,27 @@ We then now need to find out what could be the best model for the Median RT meas
 
 ```{r, message=FALSE, warning=FALSE}
 
-AllData %>%
-  select(Subject, AgeRange, Gender, SubType, MEDIAN_RT_F30_1) %>%
-  mutate(AgeNum = AgeRange) -> AllData2
+# here, Age is a integer variable
 
-AllData2$AgeNum = as.factor(AllData2$AgeNum)
-levels(AllData2$AgeNum) = list("1"=c("7_9"), "2"=c("10_11"), "3"=c("12_15"))
-
-
-model.01 <- glm(MEDIAN_RT_F30_1 ~ AgeRange*Gender*SubType,
+model.01 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
                   data = AllData,
                   family = Gamma())
 
+model.01 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = Gamma(link = "log"))
 
-model.02 <- glm(MEDIAN_RT_F30_1 ~ AgeRange*Gender*SubType,
-                  data = AllData2,
+model.03 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
                   family = gaussian())
 
 
-model.03 <- glm(MEDIAN_RT_F30_1 ~ AgeRange*Gender*SubType,
-                  data = AllData2,
+model.04 <- glm(MEDIAN_RT_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
                   family = gaussian(link = "log"))
 
-compareGLM(model.01, model.02, model.03)
+x <- compareGLM(model.01, model.02, model.03, model.04)
+x
 
 ```
 
@@ -488,13 +485,23 @@ Anova(model.01, test.statistic = "LR")
 
 Let's then adjust the model (otherwise emmeans' output can result in NA):
 ```{r, message=FALSE, warning=FALSE}
-model.01.adj <- glm(MEDIAN_RT_F30_1 ~ AgeRange + Gender + SubType,
+model.01.adj <- glm(MEDIAN_RT_F30_1 ~ Age + Gender + SubType,
                   data = AllData,
                   family = Gamma())
 ```
 
 Tukey post-hoc analysis for the AGE effect:
 ```{r, message=FALSE, warning=FALSE}
+
+summary(AllData$Age)
+
+# emm.02 <- emmeans(model.01, ~ SubType | Age, 
+#                   at = list(Age = c(78, 9, 12)))
+
+pairs(emm.02)
+
+
+
 modelrt.ph.age = emmeans(model.01.adj, pairwise ~ AgeRange)
 modelrt.ph.age$contrasts
 ```
