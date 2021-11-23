@@ -285,7 +285,7 @@ ggsave(paste(GraphSave_path, "Sample_AGERANGE_ADHDGROUP_unit.png"), type = 'cair
 
 ## Median RT
 
-### Median RT visualization and preprocessing
+### Visualization and preprocessing
 
 
 Summary of the MEDIAN RT variable: 
@@ -382,7 +382,10 @@ We explored the effect of different factors on the Median RT measures. To do so,
 - SubType (3 levels: ADD, ADD-HI, Control)</em>   
 - Gender (2 levels: Male, Female)</em>
 
-Note that the HANDEDNESS factor was not considered in analyses (see [this section](#median-rt-visualization-and-preprocessing) for more details).
+Note that the HANDEDNESS factor was not considered in analyses (see previous section).
+
+ <!-- Pour renvoyer a une section du doc rmd en utilisant un lien html (see [this section](#visualization-and-preprocessing) for more details). -->
+
 
 Here, we systematically adopted a threefold approach: 
 
@@ -591,7 +594,7 @@ ggsave(paste(GraphSave_path, "Distrib_RTmed_SubType_boxplotmean.png"), type = 'c
 
 ## Mean RT with penalties
 
-### Mean RT with penalties visualization and preprocessing
+### Visualization and preprocessing
 
 Summary of the Mean RT with penalties (MEAN_RT_WPEN) variable: 
 ```{r, echo=FALSE}
@@ -639,6 +642,9 @@ ggsave(paste(GraphSave_path, "GROUP_DISTRIB_density_MEANRTWPEN.png"), type = 'ca
 
 
 Overall, the MEAN RT WPEN distributions seem to fit a Gamma distribution. 
+
+
+### Modelization and statistics
 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -773,11 +779,14 @@ ggsave(paste(GraphSave_path, "Distrib_MRTWPEN_SubType_boxplotmean.png"), type = 
 <p style="text-align: center;"><em><font size="2">Mean reaction time with penalties as a function of the participant sub-type. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
 
 
+
+
+
 # RESPONSE TYPES
 
-## Intensity
-PCT3000_F30_1
+## Intensity scores
 
+### Visualization and preprocessing
 
 Summary of PCT_3000 response variable (index of intensity): 
 ```{r, echo=FALSE}
@@ -834,6 +843,351 @@ ggsave(paste(GraphSave_path, "GROUP_DISTRIB_density_PCT3000_INTENSITY.png"), typ
 
 
 ```
+
+
+Because there is values equal to zero, the model cannot be fitted to Gamma distribution. One possibility to solve this issue is to add a bit of noise in the data by adding 0.00001 to every intensity measurements. 
+
+
+### Modelization and statistics
+
+
+Please, note that the model using a gamma log distribution do no work. The error message is mentionned in the code below.  
+
+```{r, message=FALSE, warning=FALSE}
+AllData$PCT3000_F30_1 = AllData$PCT3000_F30_1 + 0.000001 
+
+
+model.int.01 <- glm(PCT3000_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = Gamma())
+
+# DOES NOT WORK : Error: inner loop 1; cannot correct step size
+
+# model.int.02 <- glm(PCT3000_F30_1 ~ Age*Gender*SubType,
+#                   data = AllData,
+#                   family = Gamma(link = "log"))
+
+model.int.03 <- glm(PCT3000_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = gaussian())
+
+
+model.int.04 <- glm(PCT3000_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = gaussian(link = "log"))
+
+x <- compareGLM(model.int.01, model.int.03, model.int.04)
+x[["Fit.criteria"]]
+
+
+```
+
+
+The best model is the one using a Gaussian distribution without log transformation. 
+
+```{r, message=FALSE, warning=FALSE}
+
+rm(model.int.01, model.int.04)
+
+```
+
+
+
+Let's then adjust the model:
+```{r, message=FALSE, warning=FALSE}
+Anova(model.int.03, test.statistic = "LR")
+
+
+model.int.03.adj <- glm(PCT3000_F30_1 ~ Age + Gender + SubType,
+                  data = AllData,
+                  family = gaussian())
+rm(model.int.03)
+
+```
+
+
+
+```{r, message=FALSE, warning=FALSE}
+library(performance)
+r2(model.int.03.adj)
+```
+
+The R² is seems not really okay. We should discuss this value.   
+
+```{r, message=FALSE, warning=FALSE}
+summ(model.int.03.adj)
+```
+
+Now, let's check if the distribution family is a good fit for our model. <p style="color:red"> --> MODEL DIAGNOSTIC NOT POSSIBLE: RETURNS THE FOLOWING ERROR: Error in grid.Call(C_convert, x, as.integer(whatfrom), as.integer(whatto),: Le zone active (Viewport) a des dimensions nulles</p>
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center", fig.height=3, fig.width=10}
+
+check_distribution(model.int.03.adj)
+# check_model(model.int.03.adj)
+# ggsave(paste(GraphSave_path, "INTENSITY_checkmodel01.png"), type = 'cairo', units = c("cm"), width = 70, height = 25)
+# 
+
+
+```
+<p style="text-align: center;"><em><font size="2">Visual check of the model.</em></font></p>
+
+<p style="color:red">TO BE CORRECTED:</p>
+After quality check, the model.int.03.adj seems to well describe the data, without over fitting. 
+
+We can now run a variance analysis. 
+
+```{r, message=FALSE, warning=FALSE}
+Anova(model.int.03.adj, test.statistic = "LR")
+```
+
+<strong>Results from the MEAN RT WPEN variance analysis show:</strong>
+
+- a main effect of AGE 
+- a main effect of SUBTYPE
+
+
+Tukey post-hoc analysis for the SUBJECT TYPE effect:
+
+```{r, message=FALSE, warning=FALSE}
+modelint.ph.subtype = emmeans(model.int.03.adj, pairwise ~ SubType)
+modelint.ph.subtype$contrasts
+
+```
+
+<p style="color:SteelBlue"><strong>HSD Post-hoc analysis indicates that there both ADD and ADD-HI patients had lower intensity scores than participants from the control group.</strong></p> 
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
+
+
+AllData %>%
+  ggplot(aes(x = SubType, y = PCT3000_F30_1, fill = SubType)) +
+    stat_summary(fun.data = quantiles_95, geom="boxplot") +
+    geom_jitter(color="black", size=0.5) +
+    # scale_y_continuous(limits = c(500, 4500), breaks = seq(500, 4500, by=500)) +
+    scale_fill_viridis(option = "mako", discrete = TRUE, alpha = 0.5) +
+    scale_color_viridis(option = "mako",discrete = TRUE, alpha = 0.5) +
+  theme_bw() +
+  theme(
+    plot.title   = element_text(color = "black", size = 14, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 14, hjust = 1),
+    axis.title.y = element_text(color = "black", size = 14, hjust = 1),
+    panel.border = element_blank(),
+    axis.text    = element_text(size  = 12), 
+    legend.position = "none",
+    strip.background = element_rect(colour="gray94", fill="gray94"))+
+ labs(
+    title = "Mean intensity score distribution by participant sub-type ", 
+    x = "Participant sub-type", 
+    y = "Mean intensity score (%)") 
+ggsave(paste(GraphSave_path, "Distrib_INTENSITY_SubType_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
+
+```
+<p style="text-align: center;"><em><font size="2">Mean intensity score as a function of the participant sub-type. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
+
+
+
+
+## Stability scores
+
+### Visualization and preprocessing
+
+Summary of PCT_40 response variable (index of stability): 
+```{r, echo=FALSE}
+summary(AllData$PCT40_F30_1)
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, fig.align="center"}
+
+AllData %>%
+  ggplot(aes(x = SubType, y = PCT40_F30_1, color = SubType)) +
+  geom_jitter(size=2, alpha=.7) +
+  scale_color_manual(values = c("ADD-HI" = "green4", ADD = "darkred", Control = "deepskyblue4"))  +
+  # scale_y_continuous(limits = c(40, 100), breaks = seq(40, 100, by=10)) +
+  # facet_wrap(~Load, labeller = as_labeller(loadlab))  +
+  theme_bw() +
+  theme(plot.title   = element_text(color = "black", size = 14, face = "bold"),
+        axis.title.x = element_text(color = "black", size = 14, hjust = 1),
+        axis.title.y = element_text(color = "black", size = 14, hjust = 1),
+        panel.border = element_blank(),
+        axis.text    = element_text(size  = 12), 
+        legend.position = "none",
+        strip.background = element_rect(colour="gray94", fill="gray94")) +
+  labs(title = "Mean stability distribution according to the participant sub-type", 
+       x="Sub-type", 
+       y="Mean stability (%)") 
+ggsave(paste(GraphSave_path, "PCT40_STABILITY_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
+
+
+```
+
+
+
+
+```{r , message=FALSE, warning=FALSE, echo=FALSE, fig.align='center'}
+
+AllData %>%
+dplyr::select(SubType, PCT3000_F30_1) %>%
+  ggplot(aes(x = PCT3000_F30_1, fill = SubType, color = SubType)) +
+  geom_density(alpha = 0.3) +
+  theme_bw() +
+  theme(
+    plot.title   = element_text(color = "black", size = 12, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 13, hjust = 1),
+    axis.title.y = element_text(color = "black", size = 13, hjust = 1),
+    panel.border = element_blank(),
+    axis.text    = element_text(size  = 9),
+    strip.background = element_rect(colour="gray94", fill="gray94"))+
+ labs(
+    title = "Mean stability according to the participant sub-type",
+    x = "Mean stability (%)")
+ggsave(paste(GraphSave_path, "GROUP_DISTRIB_density_PCT40_STABILITY.png"), type = 'cairo', units = c("cm"), width = 20, height = 15)
+
+
+```
+
+
+Because there is values equal to zero, it is not possible to fit models with a Gamma distribution. On possibility is to add some noise in the data by adding 0.00001 to every intensity measurements. 
+
+### Modelization and statistics
+
+
+Please, note that the model using a gamma log distribution do no work. The error message is mentionned in the code below.  
+
+```{r, message=FALSE, warning=FALSE}
+AllData$PCT40_F30_1 = AllData$PCT40_F30_1 + 0.000001 
+
+
+model.sta.01 <- glm(PCT40_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = Gamma())
+
+# DOES NOT WORK : Error: inner loop 1; cannot correct step size
+
+# model.sta.02 <- glm(PCT3000_F30_1 ~ Age*Gender*SubType,
+#                   data = AllData,
+#                   family = Gamma(link = "log"))
+
+model.sta.03 <- glm(PCT40_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = gaussian())
+
+
+model.sta.04 <- glm(PCT40_F30_1 ~ Age*Gender*SubType,
+                  data = AllData,
+                  family = gaussian(link = "log"))
+
+x <- compareGLM(model.sta.01, model.sta.03, model.sta.04)
+x[["Fit.criteria"]]
+
+
+```
+
+
+The best model is the one using a Gaussian distribution without log transformation. 
+
+```{r, message=FALSE, warning=FALSE}
+
+rm(model.int.01, model.int.04)
+
+```
+
+
+
+Let's then adjust the model:
+```{r, message=FALSE, warning=FALSE}
+Anova(model.sta.03, test.statistic = "LR")
+
+
+model.sta.03.adj <- glm(PCT40_F30_1 ~ Age+Gender+SubType,
+                  data = AllData,
+                  family = gaussian())
+rm(model.int.03)
+
+```
+
+
+
+```{r, message=FALSE, warning=FALSE}
+library(performance)
+r2(model.int.03.adj)
+```
+
+The R² is seems not really okay. <p style="color:red">We should discuss this value.</p>   
+
+```{r, message=FALSE, warning=FALSE}
+summ(model.int.03.adj)
+```
+
+Now, let's check if the distribution family is a good fit for our model. <p style="color:red">--> MODEL DIAGNOSTIC NOT POSSIBLE, SAME ERROR FOUND FOR THE INTENSITY MODEL.<p> 
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center", fig.height=3, fig.width=10}
+
+check_distribution(model.int.03.adj)
+# check_model(model.int.03.adj)
+# ggsave(paste(GraphSave_path, "INTENSITY_checkmodel01.png"), type = 'cairo', units = c("cm"), width = 70, height = 25)
+
+# par(mfrow=c(2,2)) 
+# plot(model.01)
+
+```
+<p style="text-align: center;"><em><font size="2">Visual check of the model.</em></font></p>
+
+<p style="color:red">TO BE CORRECTED:</p>
+After quality check, the model.int.03.adj seems to well describe the data, without over fitting. 
+
+We can now run a variance analysis. 
+
+```{r, message=FALSE, warning=FALSE}
+Anova(model.int.03.adj, test.statistic = "LR")
+```
+
+<strong>Results from the MEAN RT WPEN variance analysis show:</strong>
+
+- a main effect of AGE 
+- a main effect of SUBTYPE
+
+
+
+Tukey post-hoc analysis for the SUBJECT TYPE effect:
+
+```{r, message=FALSE, warning=FALSE}
+modelint.ph.subtype = emmeans(model.int.03.adj, pairwise ~ SubType)
+modelint.ph.subtype$contrasts
+
+```
+
+<p style="color:SteelBlue"><strong>HSD Post-hoc analysis indicates that there both ADD and ADD-HI patients had lower stability scores than participants from the control group.</strong></p> 
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, fig.align="center"}
+
+
+AllData %>%
+  ggplot(aes(x = SubType, y = PCT40_F30_1, fill = SubType)) +
+    stat_summary(fun.data = quantiles_95, geom="boxplot") +
+    geom_jitter(color="black", size=0.5) +
+    # scale_y_continuous(limits = c(500, 4500), breaks = seq(500, 4500, by=500)) +
+    scale_fill_viridis(option = "mako", discrete = TRUE, alpha = 0.5) +
+    scale_color_viridis(option = "mako",discrete = TRUE, alpha = 0.5) +
+  theme_bw() +
+  theme(
+    plot.title   = element_text(color = "black", size = 14, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 14, hjust = 1),
+    axis.title.y = element_text(color = "black", size = 14, hjust = 1),
+    panel.border = element_blank(),
+    axis.text    = element_text(size  = 12), 
+    legend.position = "none",
+    strip.background = element_rect(colour="gray94", fill="gray94"))+
+ labs(
+    title = "Mean stability score distribution by participant sub-type ", 
+    x = "Participant sub-type", 
+    y = "Mean stability score (%)") 
+ggsave(paste(GraphSave_path, "Distrib_STABILITY_SubType_boxplotmean.png"), type = 'cairo', units = c("cm"), width = 20, height = 10)
+
+```
+<p style="text-align: center;"><em><font size="2">Mean stability score as a function of the participant sub-type. Within each boxplot (Tukey method), the horizontal line represents the mean, the box delineates the area between the first and third quartiles (interquartile range); the vertical line represents the interval between quantile 5 and 90 (i.e., the dispersion of 90% of the population); juxtaposed to each boxplot, the dots represent individual performance.</em></font></p>
+
 
 
 
